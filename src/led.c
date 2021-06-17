@@ -30,6 +30,45 @@
 #include "led.h"
 #include "hci.h"
 
+
+char characters[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M','N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U',
+                      'V', 'W', 'X', 'Y', 'Z', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0'};
+char *morsecode[] = {".-","-...","-.-.","-..",".","..-.","--.","....","..",".---", "-.-",".-..","--","-.","---",".--.","--.-",
+                     ".-.","...","-","..-", "...-",".--","-..-","-.--","--..", ".----","..---","...--","....-", ".....", "-....",
+                     "--...","---..","----.","-----"};
+
+void to_morse(char msg[], char *result[]){
+    int i = 0;
+    int last_index = sizeof(characters) - 1;
+    int j;
+    char c;
+
+    // for each character in the message:
+    while (msg[i] != '\0'){
+        c = msg[i];
+
+        // convert to uppercase if needed
+        if (c >= 97 && c <= 122) {
+            c -= 32;
+        }
+
+        // find its index in the character list
+        j = 0;
+        while (j<=last_index && characters[j] != c){
+            j++;
+        }
+
+        // no index found: unknown char, skip it
+        if (j > last_index){
+            i++;
+            continue;
+        }
+        result[i] = morsecode[j];
+        // printf("Code of %c is %s\n", c, code);
+        i++;
+    }
+}
+
 const int led_pin = GPIO_NUM_23;
 
 static struct
@@ -94,6 +133,20 @@ void led_command()
 			period = atoi(arg);
 
 		led_blink(period, 0);
+	}
+	else if(strcmp(cmd, "morse") == 0)
+	{
+		const char *msg = strtok(NULL, " ");
+		char *morse[100];
+
+		to_morse(msg, morse);
+
+		printf("OK\n");
+		int i=0;
+		while(msg[i] != '\0'){
+			printf("%c: %s\n", msg[i], morse[i]);
+			i++;
+		}
 	}
 	else
 		goto einval;
