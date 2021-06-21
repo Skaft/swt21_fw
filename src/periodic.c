@@ -42,12 +42,19 @@ static struct
 		uint16_t period;
 		uint8_t state;
 	} led;
+	struct
+	{
+		uint8_t index;
+		uint8_t last_index;
+		uint8_t *sequence;
+	} morse;
 } periodic_conf;
 
 static uint16_t run_flags;
 static const uint16_t RUN_FLAG_ADC0 = 1 << 0;
 //static const uint16_t RUN_FLAG_ADC1 = 1 << 1;
 static const uint16_t RUN_FLAG_LED = 1 << 2;
+static const uint16_t RUN_FLAG_MORSE = 1 << 3;
 
 static QueueHandle_t periodic_queue;
 
@@ -70,6 +77,10 @@ struct periodic_event
 			uint16_t period;
 			uint16_t offset;
 		} led_blink;
+		struct {
+			uint8_t length;
+			uint8_t *sequence;
+		} led_morse;
 	};
 };
 
@@ -78,7 +89,8 @@ enum
 	EVENT_ADC_OFF = 0,
 	EVENT_ADC_PERIODIC,
 	EVENT_LED_OFF,
-	EVENT_LED_BLINK
+	EVENT_LED_BLINK,
+	EVENT_LED_MORSE
 };
 
 /*******************************************************************************
@@ -141,6 +153,21 @@ void led_blink(uint16_t period, uint16_t offset)
 /*******************************************************************************
  *
  ******************************************************************************/
+void led_morse(uint8_t *arr, uint8_t length)
+{
+	struct periodic_event event =
+	{
+		.event = EVENT_LED_MORSE,
+		.led_morse.length = length,
+		.led_morse.sequence = arr
+	};
+
+	xQueueSendToBack(periodic_queue, &event, 0);
+}
+
+/*******************************************************************************
+ *
+ ******************************************************************************/
 void periodic_thread(void *parameters)
 {
 	esp_task_wdt_delete(xTaskGetCurrentTaskHandle());
@@ -149,6 +176,10 @@ void periodic_thread(void *parameters)
 
 	TickType_t current_tick = xTaskGetTickCount();
 	TickType_t previous_tick;
+
+	uint8_t morse_index;
+	uint8_t dits;
+	uint16_t dit_duration = 500;
 
 	while(1)
 	{
@@ -171,6 +202,20 @@ void periodic_thread(void *parameters)
 		{
 			if(current_tick >= periodic_conf.led.next)
 			{
+				if(run_flags & RUN_FLAG_MORSE){
+					morse_index = periodic_conf.morse.index;
+					dits = periodic_conf.morse.sequence[morse_index];
+
+					// using led.period to set duration until next toggle
+					periodic_conf.led.period = dits * dit_duration;
+					periodic_conf.morse.index += 1;
+
+					if (morse_index == periodic_conf.morse.last_index){
+						free(periodic_conf.morse.sequence);
+						run_flags &= ~RUN_FLAG_MORSE;
+						run_flags &= ~RUN_FLAG_LED;
+					}
+				}
 				periodic_conf.led.next += periodic_conf.led.period;
 
 				periodic_conf.led.state = !periodic_conf.led.state;
@@ -221,6 +266,17 @@ void periodic_thread(void *parameters)
 				periodic_conf.led.state = 0;
 
 				run_flags |= RUN_FLAG_LED;
+				printf("OK\n");
+			}
+			else if(event.event == EVENT_LED_MORSE)
+			{
+				periodic_conf.morse.sequence = event.led_morse.sequence;
+				periodic_conf.morse.index = 0;
+				periodic_conf.morse.last_index = event.led_morse.length - 1;
+				periodic_conf.led.state = 0;
+				periodic_conf.led.next = current_tick;
+				run_flags |= RUN_FLAG_LED;
+				run_flags |= RUN_FLAG_MORSE;
 				printf("OK\n");
 			}
 		}

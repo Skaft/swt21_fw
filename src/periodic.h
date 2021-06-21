@@ -11,3 +11,4 @@ void adc_off();
 void adc_periodic(uint16_t period, uint16_t offset);
 void led_off(uint8_t state);
 void led_blink(uint16_t period, uint16_t offset);
+void led_morse();

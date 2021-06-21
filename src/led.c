@@ -30,7 +30,6 @@
 #include "led.h"
 #include "hci.h"
 
-
 char characters[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M','N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U',
                       'V', 'W', 'X', 'Y', 'Z', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0'};
 char *morsecode[] = {".-","-...","-.-.","-..",".","..-.","--.","....","..",".---", "-.-",".-..","--","-.","---",".--.","--.-",
@@ -136,17 +135,21 @@ void led_command()
 	}
 	else if(strcmp(cmd, "morse") == 0)
 	{
-		const char *msg = strtok(NULL, " ");
+		char *msg = strtok(NULL, " ");
 		char *morse[100];
 
-		to_morse(msg, morse);
+		// to_morse(msg, morse);
+		printf("sending test morse\n");
+		uint8_t length = 4, *arr;
+		arr = (uint8_t*) malloc(length * sizeof(uint8_t));
 
-		printf("OK\n");
-		int i=0;
-		while(msg[i] != '\0'){
-			printf("%c: %s\n", msg[i], morse[i]);
-			i++;
-		}
+		arr[0] = 1;
+		arr[1] = 1;
+		arr[2] = 1;
+		arr[3] = 1;
+
+		led_morse(arr, length);
+
 	}
 	else
 		goto einval;
