@@ -161,7 +161,9 @@ void led_morse(uint8_t *arr, uint8_t length)
 		.led_morse.length = length,
 		.led_morse.sequence = arr
 	};
-
+	// for (int i=0; i<length * 10; i++){
+	// 		printf("%d\n", seq[i]);
+	// 	}
 	xQueueSendToBack(periodic_queue, &event, 0);
 }
 
@@ -249,6 +251,7 @@ void periodic_thread(void *parameters)
 			else if(event.event == EVENT_LED_OFF)
 			{
 				run_flags &= ~RUN_FLAG_LED;
+				run_flags &= ~RUN_FLAG_MORSE;
 				led_set_state(event.led_off.state);
 				printf("OK\n");
 			}

@@ -36,16 +36,15 @@ char *morsecode[] = {".-","-...","-.-.","-..",".","..-.","--.","....","..",".---
                      ".-.","...","-","..-", "...-",".--","-..-","-.--","--..", ".----","..---","...--","....-", ".....", "-....",
                      "--...","---..","----.","-----"};
 
-void to_morse(char msg[], char *result[]){
-    int i = 0;
-    int last_index = sizeof(characters) - 1;
-    int j;
+void to_morse(char msg[], uint8_t *result){
+    uint8_t i=0, j, last_index = 35;
+	uint16_t k=0;
     char c;
+    char *code;
 
     // for each character in the message:
     while (msg[i] != '\0'){
         c = msg[i];
-
         // convert to uppercase if needed
         if (c >= 97 && c <= 122) {
             c -= 32;
@@ -62,8 +61,28 @@ void to_morse(char msg[], char *result[]){
             i++;
             continue;
         }
-        result[i] = morsecode[j];
-        // printf("Code of %c is %s\n", c, code);
+
+        code = morsecode[j];
+        j = 0;
+        while (code[j] != '\0'){
+            // duration for dit/dah
+            if(code[j] == '.'){
+                result[k] = 1;
+            }
+            else if (code[j] == '-'){
+                result[k] = 3;
+            }
+            else {
+                printf("Unknown morse char: %c\n", code[j]);
+            }
+            k++;
+            // duration between dit/dah
+            result[k] = 1;
+            k++;
+            j++;
+        }
+        // increase duration to 3 between letters
+        result[k-1] += 2;
         i++;
     }
 }
@@ -136,19 +155,23 @@ void led_command()
 	else if(strcmp(cmd, "morse") == 0)
 	{
 		char *msg = strtok(NULL, " ");
-		char *morse[100];
 
-		// to_morse(msg, morse);
-		printf("sending test morse\n");
-		uint8_t length = 4, *arr;
-		arr = (uint8_t*) malloc(length * sizeof(uint8_t));
+		uint8_t *seq, msglen;
+		msglen = strlen(msg);
 
-		arr[0] = 1;
-		arr[1] = 1;
-		arr[2] = 1;
-		arr[3] = 1;
+		// each morse char needs up to 10 led toggles
+		seq = (uint8_t *) calloc(msglen * 10, sizeof(uint8_t));
 
-		led_morse(arr, length);
+		to_morse(msg, seq);
+
+		uint8_t length=0;
+		for (int i=0; i<msglen * 10; i++){
+			if (seq[i] == 0){
+				break;
+			}
+			length++;
+		}
+		led_morse(seq, length);
 
 	}
 	else
